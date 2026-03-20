@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kindle Article Sender</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 30px 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 660px;
+            width: 100%;
+        }
+
+        h1 { color: #333; margin-bottom: 6px; font-size: 1.9em; }
+        .subtitle { color: #777; margin-bottom: 24px; font-size: 1.05em; }
+
+        /* ── Tabs ── */
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e8e8e8;
+            margin-bottom: 28px;
+            gap: 2px;
+        }
+        .tab {
+            padding: 10px 22px;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #999;
+            border: none;
+            background: none;
+            transition: color 0.2s;
+        }
+        .tab:hover { color: #667eea; }
+        .tab.active {
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+            margin-bottom: -2px;
+        }
+
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        /* ── Form elements ── */
+        .form-group { margin-bottom: 18px; }
+        label { display: block; margin-bottom: 7px; color: #333; font-weight: 600; font-size: 0.95em; }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="url"] {
+            width: 100%;
+            padding: 11px 14px;
+            border: 2px solid #e8e8e8;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.2s;
+            background: #fafafa;
+        }
+        input:focus { outline: none; border-color: #667eea; background: #fff; }
+
+        .help-text { font-size: 0.82em; color: #aaa; margin-top: 5px; }
+
+        /* ── Buttons ── */
+        .btn-row { display: flex; gap: 10px; }
+        .btn {
+            flex: 1;
+            padding: 13px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+        }
+        .btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(102,126,234,0.4); }
+        .btn:active:not(:disabled) { transform: translateY(0); }
+        .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+        .btn-outline {
+            flex: 1;
+            padding: 13px;
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.15s;
+        }
+        .btn-outline:hover:not(:disabled) { background: #f5f3ff; transform: translateY(-1px); }
+        .btn-outline:disabled { opacity: 0.55; cursor: not-allowed; }
+
+        .btn-sm {
+            padding: 7px 14px;
+            font-size: 13px;
+            font-weight: 500;
+            background: #f0f0f0;
+            color: #555;
+            border: none;
+            border-radius: 7px;
+            cursor: pointer;
+            transition: background 0.15s;
+            white-space: nowrap;
+        }
+        .btn-sm:hover { background: #e2e2e2; }
+
+        .btn-link {
+            background: none;
+            border: none;
+            color: #667eea;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 0;
+            text-decoration: underline;
+        }
+        .btn-link:hover { color: #764ba2; }
+
+        /* ── Loading / status ── */
+        .loading { display: none; text-align: center; margin-top: 18px; }
+        .loading.active { display: block; }
+        .spinner {
+            border: 3px solid #f0f0f0;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 36px; height: 36px;
+            animation: spin 0.9s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .status { margin-top: 14px; padding: 14px 16px; border-radius: 10px; display: none; font-size: 0.93em; line-height: 1.5; }
+        .status.active { display: block; }
+        .status.success { background: #edfaf1; color: #1a6636; border: 1px solid #b7e8c8; }
+        .status.error   { background: #fdf0f0; color: #8b1a1a; border: 1px solid #f0b8b8; }
+        .status.warning { background: #fffbeb; color: #7a5c00; border: 1px solid #f0dfa0; }
+
+        /* ── Single article preview card ── */
+        .preview-card {
+            margin-top: 10px;
+            padding: 12px 14px;
+            border-radius: 8px;
+            background: #f7f7ff;
+            border: 1px solid #e0dcff;
+            font-size: 0.88em;
+            display: none;
+        }
+        .preview-card.active { display: block; }
+        .preview-card .preview-title { font-weight: 700; color: #333; margin-bottom: 4px; }
+        .preview-card .preview-meta { color: #888; font-size: 0.92em; margin-bottom: 6px; }
+        .preview-card .preview-snippet { color: #555; line-height: 1.5; }
+        .preview-card.loading-state { color: #aaa; font-style: italic; display: block; }
+        .preview-card.error-state { background: #fff5f5; border-color: #f0b8b8; color: #999; display: block; }
+
+        /* ── URL list (compile panel) ── */
+        .url-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+
+        .url-row {
+            display: flex;
+            gap: 6px;
+            align-items: flex-start;
+            padding: 6px 8px 6px 4px;
+            border-radius: 8px;
+            transition: background 0.15s;
+        }
+        .url-row.drag-over { background: #f0edff; outline: 2px dashed #667eea; }
+        .url-row.dragging { opacity: 0.45; }
+
+        .drag-handle {
+            cursor: grab;
+            color: #ccc;
+            font-size: 16px;
+            padding: 10px 4px 0;
+            flex-shrink: 0;
+            user-select: none;
+        }
+        .drag-handle:active { cursor: grabbing; }
+
+        .url-row-inner { flex: 1; }
+        .url-row-inner input { margin: 0; }
+
+        /* Inline url-row preview */
+        .url-preview {
+            margin-top: 6px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            background: #f7f7ff;
+            border: 1px solid #e0dcff;
+            font-size: 0.82em;
+            display: none;
+        }
+        .url-preview.active { display: block; }
+        .url-preview .up-title { font-weight: 700; color: #333; }
+        .url-preview .up-meta  { color: #999; margin-top: 2px; }
+        .url-preview.loading-state { color: #bbb; font-style: italic; display: block; }
+        .url-preview.error-state   { color: #c0a0a0; display: block; }
+
+        .remove-btn {
+            flex-shrink: 0;
+            width: 30px; height: 30px;
+            border: none; border-radius: 6px;
+            background: #fde8e8; color: #c0392b;
+            font-size: 17px; line-height: 1;
+            cursor: pointer;
+            transition: background 0.15s;
+            margin-top: 8px;
+        }
+        .remove-btn:hover { background: #f5c6c6; }
+        .remove-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .url-list-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+        .url-count { font-size: 0.82em; color: #bbb; }
+
+        /* ── RSS panel ── */
+        .rss-section { margin-bottom: 18px; }
+        .rss-panel {
+            margin-top: 10px;
+            padding: 14px;
+            border: 1px solid #e8e8e8;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+        .rss-input-row { display: flex; gap: 8px; }
+        .rss-input-row input { flex: 1; }
+        #feedResults { margin-top: 12px; }
+        .feed-article-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.88em;
+        }
+        .feed-article-item:last-child { border-bottom: none; }
+        .feed-article-item input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; }
+        .feed-article-title { font-weight: 600; color: #333; }
+        .feed-article-date  { color: #aaa; font-size: 0.9em; margin-top: 2px; }
+        .feed-add-row { margin-top: 12px; display: flex; justify-content: flex-end; }
+
+        /* ── Compile progress list ── */
+        .progress-list {
+            margin-top: 14px;
+            border: 1px solid #e8e8e8;
+            border-radius: 10px;
+            overflow: hidden;
+            font-size: 0.88em;
+        }
+        .progress-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 14px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .progress-item:last-child { border-bottom: none; }
+        .pi-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+        .pi-body { flex: 1; min-width: 0; }
+        .pi-url  { color: #aaa; font-size: 0.85em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .pi-title{ font-weight: 600; color: #333; margin-top: 2px; }
+        .pi-status { color: #888; font-style: italic; margin-top: 2px; }
+        .pi-error  { color: #c0392b; margin-top: 2px; }
+        .progress-item.done   { background: #f5fdf7; }
+        .progress-item.failed { background: #fff5f5; }
+
+        .compile-step-msg {
+            padding: 10px 14px;
+            background: #f7f7ff;
+            color: #555;
+            font-size: 0.88em;
+            font-style: italic;
+            border-top: 1px solid #e8e8e8;
+        }
+
+        /* ── Features ── */
+        .features { margin-top: 28px; padding-top: 22px; border-top: 2px solid #f0f0f0; }
+        .features h2 { font-size: 1.05em; margin-bottom: 10px; color: #555; }
+        .features ul { list-style: none; padding: 0; }
+        .features li { padding: 5px 0; color: #777; font-size: 0.9em; }
+        .features li::before { content: "✓ "; color: #667eea; font-weight: bold; margin-right: 6px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📚 Kindle Article Sender</h1>
+    <p class="subtitle">Send any article — or a whole digest — to your Kindle</p>
+
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('single')">Single Article</button>
+        <button class="tab" onclick="switchTab('compile')">Compile Articles</button>
+    </div>
+
+    <!-- ════════════════════════════════ SINGLE PANEL ════════════════════════════════ -->
+    <div class="panel active" id="panel-single">
+        <form id="singleForm">
+            <div class="form-group">
+                <label for="s-url">Article URL</label>
+                <input type="url" id="s-url" placeholder="https://example.com/article" required>
+                <p class="help-text">Paste any article, blog post, or Substack URL</p>
+                <div class="preview-card" id="singlePreview"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="s-email">Kindle Email</label>
+                <input type="email" id="s-email" placeholder="username@kindle.com"
+                       value="{{ kindle_email }}" required>
+            </div>
+
+            <div class="btn-row">
+                <button type="submit" class="btn" id="s-sendBtn">Send to Kindle</button>
+                <button type="button" class="btn-outline" id="s-dlBtn">Download EPUB</button>
+            </div>
+        </form>
+
+        <div class="loading" id="s-loading">
+            <div class="spinner"></div>
+            <p id="s-loadingText">Processing…</p>
+        </div>
+        <div class="status" id="s-status"></div>
+    </div>
+
+    <!-- ════════════════════════════════ COMPILE PANEL ════════════════════════════════ -->
+    <div class="panel" id="panel-compile">
+        <form id="compileForm">
+            <div class="form-group">
+                <label for="c-title">Compilation Title</label>
+                <input type="text" id="c-title" placeholder="e.g. Morning Digest – March 19">
+                <p class="help-text">Leave blank to auto-generate from today's date</p>
+            </div>
+
+            <div class="form-group">
+                <label>Article URLs</label>
+                <div class="url-list" id="urlList"></div>
+                <div class="url-list-footer">
+                    <button type="button" class="btn-sm" onclick="addUrlRow()">+ Add URL</button>
+                    <span class="url-count" id="urlCount"></span>
+                </div>
+            </div>
+
+            <!-- RSS section -->
+            <div class="rss-section">
+                <button type="button" class="btn-link" onclick="toggleRss()">
+                    + Load articles from RSS / Substack feed
+                </button>
+                <div class="rss-panel" id="rssPanel" style="display:none">
+                    <div class="rss-input-row">
+                        <input type="url" id="rssUrl" placeholder="https://example.substack.com/feed">
+                        <button type="button" class="btn-sm" onclick="loadFeed()">Load Feed</button>
+                    </div>
+                    <div id="feedResults"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="c-email">Kindle Email</label>
+                <input type="email" id="c-email" placeholder="username@kindle.com"
+                       value="{{ kindle_email }}" required>
+            </div>
+
+            <div class="btn-row">
+                <button type="submit" class="btn" id="c-sendBtn">Compile &amp; Send to Kindle</button>
+                <button type="button" class="btn-outline" id="c-dlBtn">Download EPUB</button>
+            </div>
+        </form>
+
+        <!-- Per-article streaming progress -->
+        <div class="progress-list" id="progressList" style="display:none"></div>
+
+        <div class="loading" id="c-loading" style="display:none">
+            <div class="spinner"></div>
+            <p id="c-loadingText"></p>
+        </div>
+        <div class="status" id="c-status"></div>
+    </div>
+
+    <div class="features">
+        <h2>Features</h2>
+        <ul>
+            <li>Bypasses most paywalls automatically</li>
+            <li>Images preserved in original article positions</li>
+            <li>Compile multiple articles into one digest with a contents page</li>
+            <li>Load articles directly from RSS or Substack feeds</li>
+            <li>Download as EPUB or send straight to your Kindle</li>
+        </ul>
+    </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════
+// Utilities
+// ════════════════════════════════════════════════════
+
+function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelector(`.tab[onclick="switchTab('${name}')"]`).classList.add('active');
+    document.getElementById(`panel-${name}`).classList.add('active');
+}
+
+function saveEmail(email) {
+    if (email) localStorage.setItem('kindleEmail', email);
+}
+
+function loadSavedEmail() {
+    const saved = localStorage.getItem('kindleEmail');
+    if (saved) {
+        const se = document.getElementById('s-email');
+        const ce = document.getElementById('c-email');
+        if (se && !se.value) se.value = saved;
+        if (ce && !ce.value) ce.value = saved;
+    }
+}
+
+function showStatus(id, type, html) {
+    const el = document.getElementById(id);
+    el.className = `status active ${type}`;
+    el.innerHTML = html;
+}
+
+function clearStatus(id) {
+    const el = document.getElementById(id);
+    el.className = 'status';
+    el.innerHTML = '';
+}
+
+// ════════════════════════════════════════════════════
+// Single article panel
+// ════════════════════════════════════════════════════
+
+let singlePreviewTimer = null;
+
+document.getElementById('s-url').addEventListener('input', () => {
+    clearTimeout(singlePreviewTimer);
+    const url = document.getElementById('s-url').value.trim();
+    const card = document.getElementById('singlePreview');
+    if (!url) { card.className = 'preview-card'; return; }
+    singlePreviewTimer = setTimeout(() => fetchSinglePreview(url), 800);
+});
+
+async function fetchSinglePreview(url) {
+    const card = document.getElementById('singlePreview');
+    card.className = 'preview-card loading-state';
+    card.textContent = 'Fetching preview…';
+    try {
+        const res = await fetch('/preview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            card.className = 'preview-card active';
+            card.innerHTML = `
+                <div class="preview-title">${data.title}</div>
+                <div class="preview-meta">${[data.author, data.reading_time].filter(Boolean).join(' · ')}</div>
+                <div class="preview-snippet">${data.snippet}</div>`;
+        } else {
+            card.className = 'preview-card error-state';
+            card.textContent = 'Could not preview — will try on send.';
+        }
+    } catch {
+        card.className = 'preview-card error-state';
+        card.textContent = 'Could not preview — will try on send.';
+    }
+}
+
+const singleSteps = ['Extracting content…', 'Processing images…', 'Generating EPUB…', 'Sending to Kindle…'];
+let singleStepIdx = 0, singleInterval;
+
+document.getElementById('singleForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await sendSingle('send');
+});
+
+document.getElementById('s-dlBtn').addEventListener('click', async () => {
+    await sendSingle('download');
+});
+
+async function sendSingle(action) {
+    const url    = document.getElementById('s-url').value.trim();
+    const email  = document.getElementById('s-email').value.trim();
+    const sendBtn = document.getElementById('s-sendBtn');
+    const dlBtn   = document.getElementById('s-dlBtn');
+    const loading = document.getElementById('s-loading');
+    const loadingText = document.getElementById('s-loadingText');
+
+    sendBtn.disabled = true;
+    dlBtn.disabled   = true;
+    loading.classList.add('active');
+    clearStatus('s-status');
+
+    if (action === 'download') {
+        loadingText.textContent = 'Generating EPUB…';
+    } else {
+        singleStepIdx = 0;
+        loadingText.textContent = singleSteps[0];
+        singleInterval = setInterval(() => {
+            singleStepIdx = (singleStepIdx + 1) % singleSteps.length;
+            loadingText.textContent = singleSteps[singleStepIdx];
+        }, 3000);
+    }
+
+    try {
+        if (action === 'download') {
+            const res = await fetch('/download', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ urls: [url] })
+            });
+            loading.classList.remove('active');
+            if (res.ok) {
+                const blob = await res.blob();
+                const disposition = res.headers.get('Content-Disposition') || '';
+                const match = disposition.match(/filename="?([^"]+)"?/);
+                const filename = match ? match[1] : 'article.epub';
+                triggerDownload(blob, filename);
+                showStatus('s-status', 'success', '<strong>✓ EPUB ready</strong> — download started.');
+            } else {
+                const data = await res.json();
+                showStatus('s-status', 'error', `<strong>✗ Error:</strong> ${data.error}`);
+            }
+        } else {
+            const res = await fetch('/process', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url, kindle_email: email })
+            });
+            clearInterval(singleInterval);
+            loading.classList.remove('active');
+            const data = await res.json();
+            if (res.ok) {
+                saveEmail(email);
+                showStatus('s-status', 'success', `
+                    <strong>✓ Sent!</strong><br>
+                    <strong>${data.title}</strong> → ${data.kindle_email}<br>
+                    ${data.author ? `By ${data.author} · ` : ''}${data.images_count} image${data.images_count !== 1 ? 's' : ''} · ${data.file_size_mb} MB`);
+                document.getElementById('singleForm').reset();
+                document.getElementById('s-email').value = email;
+                document.getElementById('singlePreview').className = 'preview-card';
+            } else {
+                showStatus('s-status', 'error', `<strong>✗ Error:</strong> ${data.error}`);
+            }
+        }
+    } catch (err) {
+        clearInterval(singleInterval);
+        loading.classList.remove('active');
+        showStatus('s-status', 'error', `<strong>✗ Error:</strong> ${err.message}`);
+    } finally {
+        sendBtn.disabled = false;
+        dlBtn.disabled   = false;
+    }
+}
+
+// ════════════════════════════════════════════════════
+// Compile panel — URL list
+// ════════════════════════════════════════════════════
+
+let dragSrc = null;
+
+function makeUrlRow(initialUrl = '') {
+    const row = document.createElement('div');
+    row.className = 'url-row';
+    row.draggable = true;
+    row.innerHTML = `
+        <span class="drag-handle" title="Drag to reorder">&#x2630;</span>
+        <div class="url-row-inner">
+            <input type="url" placeholder="https://example.com/article" value="${initialUrl}">
+            <div class="url-preview"></div>
+        </div>
+        <button type="button" class="remove-btn" onclick="removeUrlRow(this)" title="Remove">&#x2212;</button>`;
+
+    const input = row.querySelector('input');
+    const preview = row.querySelector('.url-preview');
+
+    // Paste detection: split multi-line URLs
+    input.addEventListener('paste', (e) => {
+        const text = e.clipboardData.getData('text');
+        const lines = text.split(/[\n\r]+/).map(l => l.trim()).filter(l => l.startsWith('http'));
+        if (lines.length > 1) {
+            e.preventDefault();
+            input.value = lines[0];
+            lines.slice(1).forEach(u => addUrlRow(u));
+            fetchUrlPreview(input, preview);
+            return;
+        }
+    });
+
+    // Auto-preview on blur
+    let previewTimer = null;
+    input.addEventListener('input', () => {
+        clearTimeout(previewTimer);
+        if (!input.value.trim()) { preview.className = 'url-preview'; return; }
+        previewTimer = setTimeout(() => fetchUrlPreview(input, preview), 800);
+    });
+
+    // Drag and drop
+    row.addEventListener('dragstart', (e) => {
+        dragSrc = row;
+        e.dataTransfer.effectAllowed = 'move';
+        setTimeout(() => row.classList.add('dragging'), 0);
+    });
+    row.addEventListener('dragend', () => row.classList.remove('dragging'));
+    row.addEventListener('dragover', (e) => { e.preventDefault(); row.classList.add('drag-over'); });
+    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+    row.addEventListener('drop', (e) => {
+        e.preventDefault();
+        row.classList.remove('drag-over');
+        if (dragSrc && dragSrc !== row) {
+            const list = document.getElementById('urlList');
+            const rows = [...list.querySelectorAll('.url-row')];
+            const si = rows.indexOf(dragSrc), ti = rows.indexOf(row);
+            list.insertBefore(dragSrc, si < ti ? row.nextSibling : row);
+            updateUrlCount();
+        }
+    });
+
+    if (initialUrl) fetchUrlPreview(input, preview);
+    return row;
+}
+
+async function fetchUrlPreview(input, preview) {
+    const url = input.value.trim();
+    if (!url) return;
+    preview.className = 'url-preview loading-state';
+    preview.textContent = 'Fetching preview…';
+    try {
+        const res = await fetch('/preview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            preview.className = 'url-preview active';
+            preview.innerHTML = `
+                <div class="up-title">${data.title}</div>
+                <div class="up-meta">${[data.author, data.reading_time].filter(Boolean).join(' · ')}</div>`;
+        } else {
+            preview.className = 'url-preview error-state';
+            preview.textContent = 'Could not preview this URL.';
+        }
+    } catch {
+        preview.className = 'url-preview error-state';
+        preview.textContent = 'Could not preview this URL.';
+    }
+}
+
+function addUrlRow(url = '') {
+    const list = document.getElementById('urlList');
+    if (list.querySelectorAll('.url-row').length >= 20) {
+        alert('Maximum 20 URLs per compilation.'); return;
+    }
+    const row = makeUrlRow(url);
+    list.appendChild(row);
+    updateUrlCount();
+    if (!url) row.querySelector('input').focus();
+}
+
+function removeUrlRow(btn) {
+    btn.closest('.url-row').remove();
+    updateUrlCount();
+}
+
+function updateUrlCount() {
+    const rows = document.querySelectorAll('#urlList .url-row');
+    document.getElementById('urlCount').textContent = `${rows.length} URL${rows.length !== 1 ? 's' : ''}`;
+    rows.forEach(r => r.querySelector('.remove-btn').disabled = rows.length <= 1);
+}
+
+function getUrls() {
+    return [...document.querySelectorAll('#urlList .url-row input')]
+        .map(i => i.value.trim()).filter(Boolean);
+}
+
+// Initialise with 2 blank rows
+addUrlRow(); addUrlRow();
+
+// ════════════════════════════════════════════════════
+// RSS feed loader
+// ════════════════════════════════════════════════════
+
+function toggleRss() {
+    const panel = document.getElementById('rssPanel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+async function loadFeed() {
+    const url = document.getElementById('rssUrl').value.trim();
+    const results = document.getElementById('feedResults');
+    if (!url) return;
+    results.innerHTML = '<em style="color:#aaa;font-size:0.88em">Loading feed…</em>';
+    try {
+        const res = await fetch('/fetch-feed', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            results.innerHTML = `<p style="color:#c0392b;font-size:0.88em">${data.error}</p>`; return;
+        }
+        const items = data.articles.map((a, i) => `
+            <div class="feed-article-item">
+                <input type="checkbox" id="feed-${i}" value="${a.url}" checked>
+                <label for="feed-${i}">
+                    <div class="feed-article-title">${a.title || a.url}</div>
+                    <div class="feed-article-date">${a.date || ''}</div>
+                </label>
+            </div>`).join('');
+        results.innerHTML = items + `
+            <div class="feed-add-row">
+                <button type="button" class="btn-sm" onclick="addFeedArticles()">
+                    Add selected to list
+                </button>
+            </div>`;
+    } catch (err) {
+        results.innerHTML = `<p style="color:#c0392b;font-size:0.88em">${err.message}</p>`;
+    }
+}
+
+function addFeedArticles() {
+    const checked = [...document.querySelectorAll('#feedResults input[type=checkbox]:checked')];
+    checked.forEach(cb => addUrlRow(cb.value));
+    document.getElementById('rssPanel').style.display = 'none';
+    document.getElementById('feedResults').innerHTML = '';
+    document.getElementById('rssUrl').value = '';
+}
+
+// ════════════════════════════════════════════════════
+// Compile — send (streaming SSE)
+// ════════════════════════════════════════════════════
+
+document.getElementById('compileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await runCompile('send');
+});
+
+document.getElementById('c-dlBtn').addEventListener('click', async () => {
+    await runCompile('download');
+});
+
+async function runCompile(action) {
+    const urls   = getUrls();
+    const title  = document.getElementById('c-title').value.trim();
+    const email  = document.getElementById('c-email').value.trim();
+    const sendBtn = document.getElementById('c-sendBtn');
+    const dlBtn   = document.getElementById('c-dlBtn');
+
+    if (!urls.length) {
+        showStatus('c-status', 'error', '<strong>✗</strong> Please enter at least one URL.'); return;
+    }
+
+    sendBtn.disabled = true;
+    dlBtn.disabled   = true;
+    clearStatus('c-status');
+
+    if (action === 'download') {
+        // No streaming for download — regular POST returning a file
+        document.getElementById('c-loading').style.display = 'block';
+        document.getElementById('c-loadingText').textContent = `Generating EPUB for ${urls.length} article${urls.length !== 1 ? 's' : ''}…`;
+        try {
+            const res = await fetch('/download', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ urls, title })
+            });
+            document.getElementById('c-loading').style.display = 'none';
+            if (res.ok) {
+                const blob = await res.blob();
+                const disposition = res.headers.get('Content-Disposition') || '';
+                const match = disposition.match(/filename="?([^"]+)"?/);
+                triggerDownload(blob, match ? match[1] : 'digest.epub');
+                showStatus('c-status', 'success', '<strong>✓ EPUB ready</strong> — download started.');
+            } else {
+                const data = await res.json();
+                showStatus('c-status', 'error', `<strong>✗ Error:</strong> ${data.error}`);
+            }
+        } catch (err) {
+            document.getElementById('c-loading').style.display = 'none';
+            showStatus('c-status', 'error', `<strong>✗ Error:</strong> ${err.message}`);
+        } finally {
+            sendBtn.disabled = false;
+            dlBtn.disabled   = false;
+        }
+        return;
+    }
+
+    // Streaming compile → send
+    const progressList = document.getElementById('progressList');
+    progressList.style.display = 'block';
+    progressList.innerHTML = '';
+    const progressItems = {}; // index → element
+
+    try {
+        const res = await fetch('/compile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ urls, title, kindle_email: email })
+        });
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                let evt;
+                try { evt = JSON.parse(line.slice(6)); } catch { continue; }
+                handleCompileEvent(evt, progressList, progressItems, email);
+            }
+        }
+    } catch (err) {
+        showStatus('c-status', 'error', `<strong>✗ Error:</strong> ${err.message}`);
+    } finally {
+        sendBtn.disabled = false;
+        dlBtn.disabled   = false;
+    }
+}
+
+function handleCompileEvent(evt, progressList, progressItems, email) {
+    const { type, step, index, url, title, reason, message } = evt;
+
+    if (type === 'progress') {
+        if (step === 'extracting') {
+            const el = document.createElement('div');
+            el.className = 'progress-item';
+            el.innerHTML = `
+                <span class="pi-icon">⏳</span>
+                <div class="pi-body">
+                    <div class="pi-url">${url}</div>
+                    <div class="pi-status">Extracting…</div>
+                </div>`;
+            progressList.appendChild(el);
+            progressItems[index] = el;
+
+        } else if (step === 'images' && progressItems[index]) {
+            const el = progressItems[index];
+            el.querySelector('.pi-status').textContent = `Got "${title}" — processing images…`;
+
+        } else if (step === 'done' && progressItems[index]) {
+            const el = progressItems[index];
+            el.className = 'progress-item done';
+            el.innerHTML = `
+                <span class="pi-icon">✓</span>
+                <div class="pi-body">
+                    <div class="pi-title">${title}</div>
+                    <div class="pi-url">${url}</div>
+                </div>`;
+
+        } else if (step === 'failed' && progressItems[index]) {
+            const el = progressItems[index];
+            el.className = 'progress-item failed';
+            el.innerHTML = `
+                <span class="pi-icon">✗</span>
+                <div class="pi-body">
+                    <div class="pi-url">${url}</div>
+                    <div class="pi-error">${reason || 'Failed'}</div>
+                </div>`;
+
+        } else if (step === 'generating' || step === 'sending') {
+            // Append a status row at the bottom
+            const existing = progressList.querySelector('.compile-step-msg');
+            if (existing) existing.remove();
+            const el = document.createElement('div');
+            el.className = 'compile-step-msg';
+            el.textContent = message || (step === 'generating' ? 'Generating EPUB…' : 'Sending to Kindle…');
+            progressList.appendChild(el);
+        }
+
+    } else if (type === 'complete') {
+        const { articles_compiled, articles_failed, failed_urls, file_size_mb, kindle_email } = evt;
+        const stepMsg = progressList.querySelector('.compile-step-msg');
+        if (stepMsg) stepMsg.remove();
+
+        saveEmail(email);
+
+        let html = `<strong>✓ Sent!</strong> ${articles_compiled} article${articles_compiled !== 1 ? 's' : ''} compiled (${file_size_mb} MB) → ${kindle_email}`;
+        let statusType = 'success';
+
+        if (articles_failed > 0) {
+            statusType = 'warning';
+            const failList = failed_urls.map(f => `<li>${f.url} — ${f.reason}</li>`).join('');
+            html += `<br><br><strong>${articles_failed} URL${articles_failed !== 1 ? 's' : ''} skipped:</strong><ul style="margin:6px 0 0 16px">${failList}</ul>`;
+        }
+
+        showStatus('c-status', statusType, html);
+
+    } else if (type === 'error') {
+        showStatus('c-status', 'error', `<strong>✗ Error:</strong> ${message}`);
+    }
+}
+
+// ════════════════════════════════════════════════════
+// Shared helpers
+// ════════════════════════════════════════════════════
+
+function triggerDownload(blob, filename) {
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+}
+
+// Init
+loadSavedEmail();
+</script>
+</body>
+</html>

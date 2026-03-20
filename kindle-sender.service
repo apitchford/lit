@@ -1,0 +1,23 @@
+[Unit]
+Description=Kindle Article Sender
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/kindle-article-sender
+Environment="PATH=/opt/kindle-article-sender/venv/bin"
+ExecStart=/opt/kindle-article-sender/venv/bin/gunicorn \
+    --workers 4 \
+    --bind 0.0.0.0:5000 \
+    --timeout 120 \
+    --access-logfile /var/log/kindle-sender/access.log \
+    --error-logfile /var/log/kindle-sender/error.log \
+    app:app
+
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
