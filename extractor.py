@@ -183,9 +183,13 @@ class ArticleExtractor:
         """Tier 4: Extract using Playwright with JavaScript disabled"""
         try:
             from playwright.sync_api import sync_playwright
+            executable_path = os.getenv('PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH')
             
             with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
+                launch_kwargs = {'headless': True}
+                if executable_path:
+                    launch_kwargs['executable_path'] = executable_path
+                browser = p.chromium.launch(**launch_kwargs)
                 context = browser.new_context(
                     user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                     java_script_enabled=False
