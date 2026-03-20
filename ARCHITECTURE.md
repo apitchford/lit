@@ -6,8 +6,8 @@
 │                    (Flask Web Application)                      │
 │                                                                 │
 │  ┌─────────────────────────────────────────────────────────┐  │
-│  │  HTML Form: URL Input + Kindle Email                    │  │
-│  │  JavaScript: Progress tracking & Status updates         │  │
+│  │  HTML Form: URL list + Kindle Email                     │  │
+│  │  JavaScript: previews, RSS loading, status updates      │  │
 │  └─────────────────────────────────────────────────────────┘  │
 └────────────────────────────┬────────────────────────────────────┘
                              │
@@ -104,18 +104,6 @@ Data Flow Summary:
 
 URL → Extract Content → Process Images → Generate EPUB → Email → Kindle
 
-Success Rate by Tier:
-- Tier 1 (Direct): ~60% success
-- Tier 2 (Archive.is): +20% success  
-- Tier 3 (12ft.io): +10% success
-- Tier 4 (Playwright): +5% success
-- Total: ~95% success rate
-
-Processing Time:
-- Fast articles (no paywall): 10-20 seconds
-- Medium (Tier 2-3): 30-45 seconds  
-- Slow (Tier 4): 45-90 seconds
-
 File Size Limits:
 - Per image: 5MB max
 - Total EPUB: 50MB max (Amazon limit)
@@ -164,16 +152,20 @@ File Size Limits:
 - **Purpose**: Flask web interface
 - **Endpoints**:
   - `GET /`: Main interface
+  - `POST /preview`: URL preview
+  - `POST /fetch-feed`: RSS/Atom discovery
   - `POST /process`: Process article
+  - `POST /compile`: Streaming multi-article compilation
+  - `POST /download`: Direct EPUB download
   - `GET /health`: Health check
-- **Features**: Progress tracking, error handling, validation
+- **Features**: drag-to-reorder URL list, preview requests, feed loading, streaming progress, error handling
 
 ## Security Features
 
 1. **Environment Variables**: Sensitive data in `.env`
-2. **Input Validation**: URL and email validation
+2. **Request Guards**: Basic required-field checks and article-count limits
 3. **File Size Limits**: Prevent oversized EPUBs
-4. **Timeout Protection**: Prevent hanging requests
+4. **Timeout Protection**: Network timeouts on external requests
 5. **SMTP Security**: TLS encryption for email
 
 ## Scalability Considerations
@@ -206,3 +198,11 @@ Recommended metrics to track:
 - Email delivery success rate
 - Image processing success rate
 - Error types and frequencies
+
+## Nix Hosting
+
+The repo now exports a Nix flake package and NixOS module named `art-domain`.
+
+- The package contains the app sources and Python runtime.
+- The module runs the app behind Gunicorn.
+- On NAS, `nix-dotfiles` can import the repo flake and reverse proxy it on `art.bepis.lol`.

@@ -45,7 +45,6 @@ SMTP_PORT=587
 SMTP_USERNAME=your-email@gmail.com
 SMTP_PASSWORD=xxxx xxxx xxxx xxxx  # Your app password
 FROM_EMAIL=your-email@gmail.com
-KINDLE_EMAIL=your-kindle@kindle.com
 SECRET_KEY=any-random-string-here
 ```
 
@@ -53,6 +52,8 @@ SECRET_KEY=any-random-string-here
 - Go to Amazon.com → Account & Lists → Content & Devices
 - Click Preferences → Personal Document Settings
 - Your email looks like: `username_123@kindle.com`
+
+You can leave `KINDLE_EMAIL` out of `.env` and enter it in the web UI instead; the browser stores it locally after a successful send.
 
 **Approve your sender email:**
 - Same page, scroll to "Approved Personal Document E-mail List"
@@ -83,7 +84,7 @@ You should see:
 
 1. Open browser to `http://localhost:5000`
 2. Paste any article URL
-3. Verify your Kindle email
+3. Enter your Kindle email
 4. Click "Send to Kindle"
 5. Wait 30-60 seconds
 6. Article appears on your Kindle!
@@ -170,7 +171,7 @@ Perfect for:
 
 🔖 **Browser extension idea**: Create a bookmarklet to send current page
 
-⏰ **Batch processing**: Open multiple tabs, send several articles at once
+⏰ **Batch processing**: queue up multiple article URLs or load them from a feed
 
 📚 **Build your library**: Articles stay in "Manage Your Content and Devices"
 

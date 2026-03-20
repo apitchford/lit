@@ -1,6 +1,8 @@
-# Lit
+# Lit / Art Domain
 
-Turn the web into your personal reading list. Paste any article URL and Lit sends it straight to your Kindle as a clean, well-formatted EPUB — images included, in their original positions. Compile multiple articles into a single digest with a table of contents, like building your own morning newspaper.
+This repository currently serves Lit: a Flask app that turns article URLs into Kindle-friendly EPUBs, with preview, feed loading, download, and multi-article compilation support.
+
+It now also exports a Nix flake and NixOS module under the service name `art-domain`, so the same repo can be hosted on `art.bepis.lol` through `nix-dotfiles` while the repo itself remains named `lit`.
 
 Built by [Art Pitchford](https://github.com/apitchford).
 
@@ -11,9 +13,11 @@ Built by [Art Pitchford](https://github.com/apitchford).
 - Sends any article to your Kindle in one click
 - Compiles multiple articles into a single digest with a contents page
 - Loads articles from RSS and Substack feeds
-- Bypasses most paywalls automatically
+- Shows inline article previews before sending
+- Lets you download the generated EPUB without emailing it
+- Stores the chosen Kindle email and theme in browser local storage
+- Tries several extraction strategies, including a Playwright fallback for harder sites
 - Preserves images in their original positions
-- Works as a download too — grab the EPUB directly if you prefer
 
 ---
 
@@ -35,7 +39,7 @@ playwright install chromium
 cp .env.example .env
 ```
 
-Open `.env` and fill in your details:
+Open `.env` and fill in your SMTP details:
 
 ```env
 SMTP_SERVER=smtp.gmail.com
@@ -43,11 +47,12 @@ SMTP_PORT=587
 SMTP_USERNAME=you@gmail.com
 SMTP_PASSWORD=your-app-password
 FROM_EMAIL=you@gmail.com
-KINDLE_EMAIL=your-kindle@kindle.com
 SECRET_KEY=any-random-string
 ```
 
-Then add your sending address to the approved senders list on Amazon (same Preferences page where you found your Kindle email).
+`KINDLE_EMAIL` is optional: the UI lets the user enter a Kindle email directly and stores it in browser local storage after a successful send.
+
+Then add your sending address to the approved senders list on Amazon.
 
 **Run:**
 
@@ -61,11 +66,21 @@ Open [http://localhost:5000](http://localhost:5000).
 
 ## How it works
 
-Paste a URL. Lit extracts the article content, processes and embeds the images, generates an EPUB formatted for e-ink, and sends it to your Kindle via email. Amazon handles the rest.
+Paste one or more URLs. Lit can preview each article, extract the content, process and embed images, generate an EPUB formatted for e-ink, and either send it to Kindle or download it directly.
 
-For paywalled articles, it tries a few approaches in sequence — direct extraction, archive.is, 12ft.io, and finally a headless browser — stopping as soon as one works.
+For harder sites, extraction falls back through direct parsing, archive.is, 12ft.io, and finally Playwright with JavaScript disabled.
 
-For compilations, add as many URLs as you like. A title field and drag-to-reorder appear as you build your list. The resulting EPUB has a cover page and linked table of contents.
+For compilations, add as many as 20 URLs, drag to reorder them, optionally pull items from an RSS/Atom feed, and generate a digest with a cover page and linked table of contents.
+
+## Current HTTP Surface
+
+- `GET /` — main UI
+- `POST /preview` — title/snippet/reading-time preview
+- `POST /process` — single-article send to Kindle
+- `POST /fetch-feed` — RSS/Atom article discovery
+- `POST /compile` — multi-article compile with streamed progress
+- `POST /download` — generate EPUB for direct download
+- `GET /health` — health check
 
 ---
 
@@ -79,6 +94,15 @@ gunicorn -w 4 -b 0.0.0.0:5000 app:app
 ```
 
 A `Dockerfile`, `docker-compose.yml`, and `kindle-sender.service` systemd unit are included if you want to containerise or run it as a background service.
+
+### Nix / NixOS
+
+This repo exports:
+
+- `packages.default` / `packages.art-domain`
+- `nixosModules.default`
+
+The NixOS module is configured under `services.art-domain` and is intended to be reverse proxied from `art.bepis.lol`.
 
 ---
 
